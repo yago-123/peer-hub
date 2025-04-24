@@ -16,18 +16,18 @@ const (
 	MaxHeaderBytes     = 1 << 20
 )
 
-type RendezvousServer struct {
+type Server struct {
 	handlers   *Handler
 	httpServer *http.Server
 }
 
-func NewRendezvous(s store.Store) *RendezvousServer {
-	return &RendezvousServer{
+func New(s store.Store) *Server {
+	return &Server{
 		handlers: NewHandler(s),
 	}
 }
 
-func (s *RendezvousServer) Start(addr string) error {
+func (s *Server) Start(addr string) error {
 	r := gin.Default()
 
 	// todo(): add API versioning
@@ -52,7 +52,7 @@ func (s *RendezvousServer) Start(addr string) error {
 	return nil
 }
 
-func (s *RendezvousServer) Stop(ctx context.Context) error {
+func (s *Server) Stop(ctx context.Context) error {
 	if s.httpServer != nil {
 		return s.httpServer.Shutdown(ctx)
 	}
