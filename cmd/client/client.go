@@ -3,18 +3,28 @@ package main
 import (
 	"context"
 	"encoding/base64"
-	"github.com/yago-123/peer-hub/pkg/types"
 	"log"
+	"log/slog"
+	"os"
 	"time"
+
+	"github.com/yago-123/peer-hub/pkg/types"
 
 	"github.com/yago-123/peer-hub/pkg/client"
 
 	"github.com/yago-123/peer-hub/pkg/util"
+
 	// todo(): make it WireGuard agnostic in the future
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
 
+const (
+	RendezvousServerAddr = "http://rendezvous.yago.ninja:7777"
+)
+
 func main() {
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+
 	// Generate WireGuard keypair
 	privKey, err := wgtypes.GeneratePrivateKey()
 	if err != nil {
@@ -22,12 +32,11 @@ func main() {
 	}
 	pubKey := privKey.PublicKey()
 
-	log.Println("Generated keys:")
-	log.Printf("- Private: %s\n", base64.StdEncoding.EncodeToString(privKey[:]))
-	log.Printf("- Public : %s\n", base64.StdEncoding.EncodeToString(pubKey[:]))
-
+	logger.Info("Generated keys",
+		"private key", base64.StdEncoding.EncodeToString(privKey[:]),
+		"public key", base64.StdEncoding.EncodeToString(pubKey[:]))
 	// Create rendezvous client
-	client := client.New("http://rendezvous.yago.ninja:7777", 1*time.Second)
+	client := client.New(RendezvousServerAddr, 1*time.Second)
 
 	// Register this peer
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -41,7 +50,8 @@ func main() {
 	// Get public endpoint using STUN servers
 	endpoint, err := util.GetPublicEndpoint(ctx, stunServers)
 	if err != nil {
-		log.Fatalf("failed to get public endpoint: %v", err)
+		logger.Error("failed to get public endpoint", err)
+		return
 	}
 
 	err = client.Register(ctx, types.RegisterRequest{
@@ -51,19 +61,18 @@ func main() {
 		Endpoint:   endpoint.String(),
 	})
 	if err != nil {
-		log.Fatalf("register failed: %v", err)
+		logger.Error("registration of peer failed", err, "peer-id", "peer-a")
+		return
 	}
-	log.Println("Registered successfully")
+
+	logger.Info("Registered successfully")
 
 	// Discover remote peer
 	resp, udpAddr, err := client.Discover(ctx, "peer-a")
 	if err != nil {
-		log.Fatalf("discover failed: %v", err)
+		logger.Error("discovery failed", err)
+		return
 	}
 
-	log.Println("Discovered peer:")
-	log.Printf("- PeerID    : %s", resp.PeerID)
-	log.Printf("- PublicKey : %s", resp.PublicKey)
-	log.Printf("- Endpoint  : %s", udpAddr)
-	log.Printf("- AllowedIPs: %v", resp.AllowedIPs)
+	logger.Info("Discovered peer", "peer-id", resp.PeerID, "public-key", resp.PublicKey, "endpoint", udpAddr, "allowed-ips", resp.AllowedIPs)
 }

@@ -1,9 +1,10 @@
 package server
 
 import (
-	"github.com/yago-123/peer-hub/pkg/common"
 	"net"
 	"net/http"
+
+	"github.com/yago-123/peer-hub/pkg/common"
 
 	"github.com/yago-123/peer-hub/pkg/types"
 

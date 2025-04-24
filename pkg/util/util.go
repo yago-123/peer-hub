@@ -3,9 +3,10 @@ package util
 import (
 	"context"
 	"fmt"
-	"github.com/yago-123/peer-hub/pkg/common"
 	"net"
 	"time"
+
+	"github.com/yago-123/peer-hub/pkg/common"
 
 	"github.com/pion/stun"
 )
