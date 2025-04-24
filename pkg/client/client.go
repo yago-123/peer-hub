@@ -28,7 +28,7 @@ type Client struct {
 	client       *http.Client
 }
 
-func NewRendezvous(baseURL string, waitInterval time.Duration) Rendezvous {
+func New(baseURL string, waitInterval time.Duration) Rendezvous {
 	return &Client{
 		baseURL:      baseURL,
 		waitInterval: waitInterval,
