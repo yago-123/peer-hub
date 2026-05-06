@@ -5,9 +5,11 @@ import (
 	"encoding/base64"
 	"log"
 	"log/slog"
+	"net"
 	"os"
 	"time"
 
+	"github.com/yago-123/peer-hub/pkg/common"
 	"github.com/yago-123/peer-hub/pkg/types"
 
 	"github.com/yago-123/peer-hub/pkg/client"
@@ -20,6 +22,7 @@ import (
 
 const (
 	RendezvousServerAddr = "http://rendezvous.yago.ninja:7777"
+	registerTimeout      = 10 * time.Second
 )
 
 func main() {
@@ -39,7 +42,7 @@ func main() {
 	client := client.New(RendezvousServerAddr, 1*time.Second)
 
 	// Register this peer
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), registerTimeout)
 	defer cancel()
 
 	stunServers := []string{
@@ -47,10 +50,17 @@ func main() {
 		"stun1.l.google.com:19302",
 	}
 
-	// Get public endpoint using STUN servers
-	endpoint, err := util.GetPublicEndpoint(ctx, stunServers)
+	udpConn, err := net.ListenUDP(common.UDPProtocol, nil)
 	if err != nil {
-		logger.Error("failed to get public endpoint", err)
+		logger.Error("failed to create UDP socket", "err", err)
+		return
+	}
+	defer udpConn.Close()
+
+	// Get public endpoint using STUN servers
+	endpoint, err := util.GetPublicEndpoint(ctx, udpConn, stunServers)
+	if err != nil {
+		logger.Error("failed to get public endpoint", "err", err)
 		return
 	}
 
@@ -61,7 +71,7 @@ func main() {
 		Endpoint:   endpoint.String(),
 	})
 	if err != nil {
-		logger.Error("registration of peer failed", err, "peer-id", "peer-a")
+		logger.Error("registration of peer failed", "err", err, "peer-id", "peer-a")
 		return
 	}
 
@@ -70,7 +80,7 @@ func main() {
 	// Discover remote peer
 	resp, udpAddr, err := client.Discover(ctx, "peer-a")
 	if err != nil {
-		logger.Error("discovery failed", err)
+		logger.Error("discovery failed", "err", err)
 		return
 	}
 
