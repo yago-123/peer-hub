@@ -1,0 +1,24 @@
+[tools]
+go = "1.26.2"
+golangci-lint = "2.9.0"
+"go:golang.org/x/tools/cmd/goimports" = "latest"
+
+[tasks.all]
+description = "Run imports, fmt, and lint"
+run = [
+  "mise run imports",
+  "mise run fmt",
+  "mise run lint",
+]
+
+[tasks.imports]
+description = "Format Go imports"
+run = "find . -name '*.go' -print0 | xargs -0 goimports -w"
+
+[tasks.fmt]
+description = "Format Go files"
+run = "go fmt ./..."
+
+[tasks.lint]
+description = "Run golangci-lint"
+run = "golangci-lint run ./..."
